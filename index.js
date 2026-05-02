@@ -22,7 +22,7 @@ connectDB()
 app.use(cookieParser())
 app.use(express.json())
 app.use(cors({
-      origin: ["https://team-task-manager-iota-one.vercel.app/", "http://localhost:5173"],
+      origin: ["https://team-task-manager-iota-one.vercel.app", "http://localhost:5173"],
       credentials: true
 }))
 

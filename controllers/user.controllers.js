@@ -1,54 +1,60 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken"
 import { User } from "../models/user.models.js";
-import { transporter } from "../services/emailService.js";
-import { sendEmail } from "../utils/mailer.js";
 import { welcomeEmail } from "../utils/emailTemplate.js";
 
+import { sendEmail } from "../services/emailService.js";
+
 export const registerUser = async (req, res) => {
-      try {
-            const { userName, email, password } = req.body;
+  try {
+    const { userName, email, password } = req.body;
 
-            if (!userName || !email || !password) {
-                  return res.status(400).json({ success: false, message: "Missing value" });
-            }
+    if (!userName || !email || !password) {
+      return res.status(400).json({ success: false, message: "Missing value" });
+    }
 
-            // Check for existing userName
-            if (await User.findOne({ userName })) {
-                  return res.status(409).json({ success: false, message: "userName already exists" });
-            }
+    // Check existing user
+    if (await User.findOne({ userName })) {
+      return res.status(409).json({ success: false, message: "Username already exists" });
+    }
 
-            // Check for existing email
-            if (await User.findOne({ email })) {
-                  return res.status(409).json({ success: false, message: "Email already exists" });
-            }
+    if (await User.findOne({ email })) {
+      return res.status(409).json({ success: false, message: "Email already exists" });
+    }
 
-            // Hash password
-            const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-            // Prepare user object
-            const user = new User({ userName, email, password: hashedPassword });
+    // Create & save user FIRST ✅
+    const user = await User.create({
+      userName,
+      email,
+      password: hashedPassword,
+    });
 
-            // Send welcome
-            try {
-                  await transporter.sendMail(welcomeEmail(email, userName));
-            } catch (emailError) {
-                  console.error("Failed to send welcome email:", emailError.message);
-                  return res.status(500).json({
-                        success: false,
-                        message: "User creation failed: could not send welcome email"
-                  });
-            }
+    // ✅ Send welcome email AFTER user is saved
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Welcome 🎉",
+        text: `Hello ${user.userName}, welcome to our app!`,
+      });
+    } catch (emailError) {
+      console.error("Email failed but user created:", emailError.message);
+    }
 
-            // Save user
-            await user.save();
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+    });
 
-            res.status(201).json({ success: true, message: "User created successfully" });
-
-      } catch (error) {
-            console.error(error);
-            res.status(500).json({ success: false, message: "Server error while creating user" });
-      }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while creating user",
+    });
+  }
 };
 
 export const loginUser = async (req, res) => {

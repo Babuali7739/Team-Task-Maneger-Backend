@@ -32,4 +32,8 @@ app.use("/api/todo", todoRouter)
 app.use("/api/sub-todo", subTodoRouter)
 app.use("/api/todo/invite", invitationRouter)
 
+app.get("/", (req, res) => {
+  res.send("🚀 Backend is running successfully");
+});
+
 app.listen(PORT, () => console.log(`server started at port ${PORT}`))
